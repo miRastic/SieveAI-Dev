@@ -1,12 +1,11 @@
 
 from .base import PluginBase
 
-class AlphaFold(PluginBase):
+class PatchDockWeb(PluginBase):
   is_ready = False
-  plugin_name = "AlphaFold"
+  plugin_name = "PatchDockWeb"
   process = ['analysis']
-  url = "https://alphafoldserver.com"
-
+  url = "https://bioinfo3d.cs.tau.ac.il/PatchDock/"
   Receptors = None
   Ligands = None
 
@@ -18,6 +17,9 @@ class AlphaFold(PluginBase):
 
   def boot(self, *args, **kwargs):
     self.setup(*args, **kwargs)
+
+  def _prepare_receptor(self, _rec_id):
+    ...
 
   def run(self, *args, **kwargs):
     ...

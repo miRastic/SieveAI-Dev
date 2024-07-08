@@ -6,6 +6,8 @@ class Manager(ConfigManager):
 
   def __init__(self, *args, **kwargs):
     super().__init__(**kwargs)
+    if not self.SETTINGS.user.path_base:
+      self.SETTINGS.user.path_base = self.path_base
 
   # Manage commandline operations
   def _update_cli_args(self):
@@ -13,7 +15,7 @@ class Manager(ConfigManager):
     _version_info = f"TEST (build-TEST)"
     _cli_settings = {
       "debug": (['--debug'], None, 0, 'silent/verbose/debug mode from 0, 1, 2, and 3.', {}),
-      "path_base": (['-b'], "*", [self.OS.getcwd()], 'Provide base directory to run the process.', {}),
+      "path_base": (['-b'], None, self.OS.getcwd(), 'Provide base directory to run the process.', {}),
       "dir_receptors": (['-r'], None, 'receptors', 'Directory name containing receptors.', {}),
       "dir_ligands": (['-l'], None, 'ligands', 'Directory name containing ligands.', {}),
       "docking_programs": (['-d'], "*", ['vina'], 'One or more Docking Programs eg: vina, hdocklite, auto.', {}),

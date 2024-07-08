@@ -1,5 +1,5 @@
 from .base import ManagerBase
-from flask import Flask, jsonify as FlaskJSON
+from flask import Flask, jsonify as FlaskJSON, request as _Request
 import signal as Signal
 import threading as Threader
 
@@ -9,23 +9,29 @@ class WebManager(ManagerBase):
   webapp_port = '5007'
   webapp_debug = True
   webapp = None
+  Request = _Request
+  allowed_methods = ['GET', 'POST']
 
   def __init__(self, *args, **kwargs):
     super().__init__(**kwargs)
     self.webapp = Flask(self.webapp_name)
+    self.webapp.config['CORS_HEADERS'] = 'Content-Type'
 
   response_status = 200
+
   def send_api_data(self, *args, **kwargs):
     """Return API Data to the Query"""
     _data_dict = {
       "status": self.response_status,
-      # "mimetype": 'application/json'
     }
     _data_dict.update(kwargs)
-    return FlaskJSON(**_data_dict)
+    _response = FlaskJSON(**_data_dict)
+    _response.headers.add('Access-Control-Allow-Origin', '*')
+    # _response.headers.add('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept')
+    return _response
 
   def add_endpoint(self, _endpoint, _handler):
-    self.webapp.route(_endpoint)(_handler)
+    self.webapp.route(_endpoint, methods=self.allowed_methods)(_handler)
 
   server_thread = None
   def serve(self, *args, **kwargs):
@@ -74,25 +80,53 @@ class SieveAIAPI(WebManager):
     return self.send_api_data(path=_path, args=args, kwargs=kwargs)
 
   def api_introduction(self, *args, **kwargs):
-    return self.send_api_data(hello='This website is working....')
+    return self.send_api_data(statusText='Connection is okay.')
 
   def method_endpoint_maps(self):
     return {
       '/': self.api_introduction,
       'tutorial': self.api_introduction,
       '<path:path>': self.api_dynamic_path,
-      'settings': self.get_plugin_resources,
+      'settings': self.get_settings,
+      'plugins': self.get_plugins,
+      'mols': self.get_mols,
     }
 
-  def get_plugin_resources(self, *args, **kwargs):
+  def get_settings(self, *args, **kwargs):
     """Check executables and available software and programs available through plugins"""
 
-    # Default Settings???
-    _processes = {
-      'docking': ['vina', 'hdocklite', 'patchdock', 'annapurna'],
-      'analysis': ['chimerax', 'vmdpython']
-    }
+    _d = self.convert_to_toml_obj({'user': self.SETTINGS.user})
+    _d = self.TOML.loads(_d).get('user')
 
-    _process_plugins = {}
+    return self.send_api_data(settings=_d)
 
-    return self.send_api_data(processes=_processes)
+  def get_plugins(self, *args, **kwargs):
+    """Check executables and available software and programs available through plugins"""
+
+    # Discover Plugins and Group Them by type
+
+    return self.send_api_data(plugins=[])
+
+  def get_mols(self, *args, **kwargs):
+    """Check executables and available software and programs available through plugins"""
+
+    _receptors = []
+    for _file in self.SETTINGS.user.path_receptors.files:
+      _size, *_, _unit = self.convert_bytes(_file.size)
+      _receptors.append({
+        'size': f"{_size:.2f} {_unit}",
+        'extension': _file.ext,
+        'path': str(_file),
+      })
+
+    _ligands = []
+    for _file in self.SETTINGS.user.path_ligands.files:
+      _size, *_, _unit = self.convert_bytes(_file.size)
+      _ligands.append({
+        'size': f"{_size:.2f} {_unit}",
+        'extension': _file.ext,
+        'path': str(_file),
+      })
+
+    _complexes = []
+    return self.send_api_data(receptors=_receptors, ligands=_ligands,  complexes=_complexes)

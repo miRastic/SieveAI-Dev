@@ -1,7 +1,7 @@
 
 from .base import PluginBase
 
-class AlphaFold(PluginBase):
+class AlphaFoldWeb(PluginBase):
   is_ready = False
   plugin_name = "AlphaFold"
   process = ['analysis']

@@ -67,9 +67,9 @@ class OpenBabel(PluginBase):
     _path_source = kwargs.get('path_source', args[0] if len(args) > 0 else None)
     _path_target = kwargs.get('path_target', args[1] if len(args) > 1 else None)
 
+    # _command = f"""obabel -i{_file_ext} {_mol_path} -o{_ext_to} -O {_converted_path} """
     _res = self.cmd_run("obabel",
                              str(_path_source),
                              "-O", str(_path_target),
                              "-h", "--quiet")
-
     return _res
