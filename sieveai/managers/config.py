@@ -1,5 +1,6 @@
 from .base import ManagerBase
 from collections.abc import Mapping
+from ..plug import EntityPath
 
 class ConfigManager(ManagerBase):
   def __init__(self, *args, **kwargs):
@@ -41,6 +42,8 @@ class ConfigManager(ManagerBase):
     self.SETTINGS.plugin_data = self.ObjDict()
 
   def __process_config(self) -> None:
+    self.path_base = EntityPath(self.path_base)
+
     if self.SETTINGS.user.path_receptors is None:
       self.SETTINGS.user.path_receptors = (self.path_base / self.SETTINGS.user.dir_receptors)
 

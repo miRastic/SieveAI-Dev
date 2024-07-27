@@ -1,5 +1,8 @@
 
-from UtilityLib.lib import StepManager, EntityPath, ObjDict as DictConfig
+from UtilityLib.lib.entity import EntityPath
+from UtilityLib.lib.obj import ObjDict as DictConfig
+from UtilityLib.lib.step import StepManager
+
 from UtilityLib import ProjectManager
 
 from .__metadata__ import __version__, __build__

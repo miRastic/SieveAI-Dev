@@ -66,22 +66,6 @@ class Vina(PluginBase):
     if not self.path_pkl_progress.exists():
       self.Complexes = self.ObjDict()
 
-  def run(self, *args, **kwargs) -> None:
-    # Setting molecular formats
-    _mgltools = PluginManager.share_plugin('mgltools')()
-    self.Receptors.set_format('pdbqt', converter=_mgltools.prepare_receptor)
-
-    _openBabel = PluginManager.share_plugin('openbabel')()
-    self.Ligands.set_format('pdbqt', converter=_openBabel.convert)
-    self._queue_complexes()
-    self._update_progress()
-
-    self.process_queue()
-    self.queue_final_callback(self._tabulate_results)
-
-  def shutdown(self, *args, **kwargs) -> None:
-    ...
-
   def _restore_progress(self, *args, **kwargs):
     if self.path_pkl_progress.exists():
       _ci = self.unpickle(self.path_pkl_progress)
@@ -155,6 +139,7 @@ class Vina(PluginBase):
     _cuid_c = self.Complexes[cuid]
 
     if _cuid_c.path_out.exists():
+      self.log_debug(f'Vina result for {cuid} exists. Returning...')
       return
 
     _config = {
@@ -174,6 +159,13 @@ class Vina(PluginBase):
 
   def _run_analysis(self, cuid):
     _cuid_c = self.Complexes[cuid]
+
+    _cuid_c.path_cxc_cmd = (_cuid_c.path_docking / 'analysis.cxc').rel_path()
+
+    if _cuid_c.path_cxc_cmd.exists():
+      self.log_debug(f'ChimeraX analysis file for {cuid} exists, skipping...')
+      return
+
     if not _cuid_c.path_score.exists():
       return
 
@@ -202,12 +194,12 @@ class Vina(PluginBase):
 
     _models = _df_score['mode'].tolist()
 
-    _cuid_c.path_cxc_cmd = (_cuid_c.path_docking / 'analysis.cxc').rel_path()
     _file_template_cxc_contacts = 'CXC-Result-Model-%s.contacts.txt'
     _file_template_cxc_hbonds = 'CXC-Result-Model-%s.hbonds.txt'
 
     for _model_id in _models:
       _path_contacts = (_cuid_c.path_docking / (_file_template_cxc_contacts % _model_id)).resolve()
+
       if _path_contacts.exists(): continue
 
       _complex_commads.extend([
@@ -237,9 +229,7 @@ class Vina(PluginBase):
       ])
 
     _cuid_c.path_cxc_cmd.write_text("\n".join(_complex_commads))
-
     _CX =  self.SETTINGS.plugin_refs.analysis.chimerax()
-
     _CX.exe_cxc_file(_cuid_c.path_cxc_cmd.resolve())
 
     _summary = []
@@ -276,10 +266,11 @@ class Vina(PluginBase):
         'hbonds': _hbonds,
       })
 
-    _df_summary = self.DF(_summary)
-    _df_score = self.PD.merge(_df_score, _df_summary, on='mode', how='outer')
-    # _df_score.columns = ['Conformer ID', 'VINA Score', 'RMSD LB', 'RMSD UB', 'Total Contacts', 'Total Hbonds', 'Contacts', 'Hbonds']
-    self.Complexes[cuid].vina_results = _df_score
+    if len(_summary) > 0:
+      _df_summary = self.DF(_summary)
+      _df_score = self.PD.merge(_df_score, _df_summary, on='mode', how='outer')
+      # _df_score.columns = ['Conformer ID', 'VINA Score', 'RMSD LB', 'RMSD UB', 'Total Contacts', 'Total Hbonds', 'Contacts', 'Hbonds']
+      self.Complexes[cuid].vina_results = _df_score
 
   def _prepare_molecules(self, cuid):
     return cuid
@@ -371,8 +362,6 @@ class Vina(PluginBase):
         'affinity': True,
         'total_contacts': False,
         'total_hbonds': False,
-        'contacts': False,
-        'hbonds': False,
       }
 
     _all_res = _all_res.reset_index(drop=True)
@@ -394,7 +383,6 @@ class Vina(PluginBase):
     _reindexed_score = _all_res.Final_Score.reset_index(drop=True)
     _all_res['Final_Rank'] = _reindexed_score.index + 1
 
-
     _grouper = 'Complex UID'
     _score_col = 'Final Score'
 
@@ -403,7 +391,7 @@ class Vina(PluginBase):
     _top_res = _all_res.loc[_all_res.groupby(_grouper)[_score_col].idxmin()].copy()
 
     _top_res = _top_res.reset_index(drop=True)
-    _top_res = _top_res[['Final Rank', 'Receptor ID', 'Ligand ID', 'Conformer ID', 'VINA Score', 'Total Contacts', 'Total Hbonds']].copy()
+    _top_res = _top_res[['Final Rank', _grouper, 'Receptor ID', 'Ligand ID', 'Conformer ID', 'VINA Score', 'Total Contacts', 'Total Hbonds', 'Contacts', 'Hbonds']].copy()
 
     _top_res['Final Rank'] = _top_res.index + 1
 
@@ -422,8 +410,8 @@ class Vina(PluginBase):
 
     # Combine all the interactions
     _score_tables = []
-    for _idx, _cmplx in self.Complexes.items():
-      if str(_idx).startswith('_'): continue
+    for _idx in self.Complexes._keys:
+      _cmplx = self.Complexes[_idx]
       if not all([isinstance(_cmplx, (dict)), 'vina_results' in _cmplx]):
         continue
 
@@ -433,10 +421,16 @@ class Vina(PluginBase):
       _s['Complex_UID'] = _cmplx.uid
       _score_tables.append(_s)
 
+    if len(_score_tables) == 0:
+      self.log_debug('No results were found to be concatenated.')
+      return
+
     _score_tables = self.PD.concat(_score_tables)
 
     # Save conformers and ranks as excel
     self._df_results, _top_ranked = self._rank_conformers(_score_tables)
+
+    # self.pd_excel(self.path_excel_results, _score_tables, sheet_name=f"Raw-Results")
     self.pd_excel(self.path_excel_results, self._df_results, sheet_name=f"{self.plugin_uid}-All-Ranked")
     self.pd_excel(self.path_excel_results, _top_ranked, sheet_name=f"{self.plugin_uid}-Top-Ranked")
 
@@ -503,3 +497,23 @@ class Vina(PluginBase):
     _vina_config_lines = "\n".join(_vina_config_lines + ["\n"])
 
     _config_path.write(_vina_config_lines)
+
+
+  def run(self, *args, **kwargs) -> None:
+    # Setting molecular formats
+    _mgltools = PluginManager.share_plugin('mgltools')()
+    self.Receptors.set_format('pdbqt', converter=_mgltools.prepare_receptor)
+
+    _openBabel = PluginManager.share_plugin('openbabel')()
+    self.Ligands.set_format('pdbqt', converter=_openBabel.convert)
+    self._queue_complexes()
+    self._update_progress()
+
+    if self.multiprocessing:
+      self.process_queue()
+      self.queue_final_callback(self._tabulate_results)
+    else:
+      self._tabulate_results()
+
+  def shutdown(self, *args, **kwargs) -> None:
+    ...
