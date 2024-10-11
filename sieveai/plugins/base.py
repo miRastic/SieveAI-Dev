@@ -1,4 +1,4 @@
-from ..plug import SieveAIBase, DictConfig
+from ..plug import SieveAIBase
 
 class PluginBase(SieveAIBase):
   is_ready = False
@@ -14,6 +14,10 @@ class PluginBase(SieveAIBase):
 
   def get_status(self, cuid=None):
     _status = None
+
+    if not hasattr(self, 'Complexes'):
+      return
+
     if not cuid is None and cuid in self.Complexes:
       _status = self.Complexes[cuid].step.current
     else:

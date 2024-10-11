@@ -11,6 +11,15 @@ import warnings as WARNINGS
 # Python binding for AutoDock VINA
 from vina import Vina as VinaPy
 
+"""
+ToDo:
+  Clean PDB files
+  Fix alternate occupancy along with residue name for correct PDBQT coordinates
+  * https://www.cgl.ucsf.edu/chimerax/docs/user/commands/altlocs.html
+  * alt list; alt clean;
+
+"""
+
 class Vina(PluginBase):
   is_ready = False
   plugin_name = "AutoDock VINA"
@@ -162,10 +171,6 @@ class Vina(PluginBase):
 
     _cuid_c.path_cxc_cmd = (_cuid_c.path_docking / 'analysis.cxc').rel_path()
 
-    if _cuid_c.path_cxc_cmd.exists():
-      self.log_debug(f'ChimeraX analysis file for {cuid} exists, skipping...')
-      return
-
     if not _cuid_c.path_score.exists():
       return
 
@@ -183,54 +188,56 @@ class Vina(PluginBase):
 
     _df_score = self.DF(_score_records, columns=self._score_headers)
 
-    _complex_commads = [
-      f"close;"
-      f"set bgColor white; open {_cuid_c.path_receptor.resolve()}; wait; hide surfaces; hide atoms; show cartoons; wait;"
-      "addh;",
-      "~sel;",
-      "wait;",
-      f"open {_cuid_c.path_out.resolve()}; wait;",
-    ]
-
     _models = _df_score['mode'].tolist()
-
+    _CX =  self.SETTINGS.plugin_refs.analysis.chimerax()
     _file_template_cxc_contacts = 'CXC-Result-Model-%s.contacts.txt'
     _file_template_cxc_hbonds = 'CXC-Result-Model-%s.hbonds.txt'
 
-    for _model_id in _models:
-      _path_contacts = (_cuid_c.path_docking / (_file_template_cxc_contacts % _model_id)).resolve()
+    if _cuid_c.path_cxc_cmd.exists():
+      self.log_debug(f'ChimeraX analysis file for {cuid} exists, skipping CXC analysis...')
+    else:
+      _complex_commads = [
+        f"close;"
+        f"set bgColor white; open {_cuid_c.path_receptor.resolve()}; wait; hide surfaces; hide atoms; show cartoons; wait;"
+        "addh;",
+        "~sel;",
+        "wait;",
+        f"open {_cuid_c.path_out.resolve()}; wait;",
+      ]
 
-      if _path_contacts.exists(): continue
+      for _model_id in _models:
+        _path_contacts = (_cuid_c.path_docking / (_file_template_cxc_contacts % _model_id)).resolve()
+
+        if _path_contacts.exists(): continue
+
+        _complex_commads.extend([
+          f"# MODEL-NO-{_model_id}",
+          "hide #!2.1-%s target m;" % (len(_models)),
+          f"show #!2.{_model_id} models;",
+          f"view;",
+          f"sel #!2.{_model_id};", # Select the model
+          f"contacts (#1 & ~hbonds) restrict sel radius 0.05 log t saveFile {_path_contacts};",
+          f"wait;",
+          f"hb #1 restrict sel reveal t show t select t radius 0.05 log t saveFile {(_cuid_c.path_docking / (_file_template_cxc_hbonds % _model_id)).resolve()};",
+          f"wait;",
+          "label sel residues text {0.name}-{0.number} height 1.5 offset -2,0.25,0.25 bgColor #00000099 color white;",
+          f"~sel;",
+          # f"save {self.path_analysis}/{_comp}--{_model_id}.complex.png width 1200 height 838 supersample 4 transparentBackground true;",
+          f"sel #!2.{_model_id};", # Select the model
+          f"view sel;",
+          f"~sel;",
+          # f"save {self.path_analysis}/{_comp}--{_model_id}.ligand.png width 1200 height 838 supersample 4 transparentBackground true;",
+          f"turn x 45;",
+          # f"save {self.path_analysis}/{_comp}--{_model_id}.T45.ligand.png width 1200 height 838 supersample 4 transparentBackground true;",
+          f"\n",
+        ])
 
       _complex_commads.extend([
-        f"# MODEL-NO-{_model_id}",
-        "hide #!2.1-%s target m;" % (len(_models)),
-        f"show #!2.{_model_id} models;",
-        f"view;",
-        f"sel #!2.{_model_id};", # Select the model
-        f"contacts (#1 & ~hbonds) restrict sel radius 0.05 log t saveFile {_path_contacts};",
-        f"wait;",
-        f"hb #1 restrict sel reveal t show t select t radius 0.05 log t saveFile {(_cuid_c.path_docking / (_file_template_cxc_hbonds % _model_id)).resolve()};",
-        f"wait;",
-        "label sel residues text {0.name}-{0.number} height 1.5 offset -2,0.25,0.25 bgColor #00000099 color white;",
-        f"~sel;",
-        # f"save {self.path_analysis}/{_comp}--{_model_id}.complex.png width 1200 height 838 supersample 4 transparentBackground true;",
-        f"sel #!2.{_model_id};", # Select the model
-        f"view sel;",
-        f"~sel;",
-        # f"save {self.path_analysis}/{_comp}--{_model_id}.ligand.png width 1200 height 838 supersample 4 transparentBackground true;",
-        f"turn x 45;",
-        # f"save {self.path_analysis}/{_comp}--{_model_id}.T45.ligand.png width 1200 height 838 supersample 4 transparentBackground true;",
-        f"\n",
-      ])
+          f"exit;",
+        ])
 
-    _complex_commads.extend([
-        f"exit;",
-      ])
-
-    _cuid_c.path_cxc_cmd.write_text("\n".join(_complex_commads))
-    _CX =  self.SETTINGS.plugin_refs.analysis.chimerax()
-    _CX.exe_cxc_file(_cuid_c.path_cxc_cmd.resolve())
+      _cuid_c.path_cxc_cmd.write_text("\n".join(_complex_commads))
+      _CX.exe_cxc_file(_cuid_c.path_cxc_cmd.resolve())
 
     _summary = []
     for _model_id in _models:
@@ -288,10 +295,10 @@ class Vina(PluginBase):
 
       _step = self.Complexes[cuid].step._current
 
-      if self.Complexes[cuid].step.is_last:
-        self.log_debug(f"{cuid}:: Last Step: {_step}")
-      else:
+      if not self.Complexes[cuid].step.is_last:
         self.log_debug(f"{cuid}:: Step: {_step}")
+      else:
+        self.log_debug(f"{cuid}:: Last Step: {_step}")
 
       self._steps_map_methods[_step](cuid)
       self.Complexes[cuid].steps_completed.append(_step)
@@ -421,7 +428,7 @@ class Vina(PluginBase):
       _s['Complex_UID'] = _cmplx.uid
       _score_tables.append(_s)
 
-    if len(_score_tables) == 0:
+    if not len(_score_tables) > 0:
       self.log_debug('No results were found to be concatenated.')
       return
 

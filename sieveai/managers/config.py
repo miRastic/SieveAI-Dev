@@ -8,21 +8,22 @@ class ConfigManager(ManagerBase):
     self._init_config()
 
   def __set_defaults(self):
-
     _user_vars = {
       'path_base': None,
+
+      'dir_receptors': 'receptors',
+      'dir_ligands': 'ligands',
+      'dir_docking': 'docking',
+      'dir_analysis': 'analysis',
+      'dir_results': 'results',
+      'dir_plots': 'plots',
 
       'path_receptors': None,
       'path_ligands': None,
       'path_docking': None,
       'path_results': None,
       'path_plots': None,
-
-      'dir_receptors': 'receptors',
-      'dir_ligands': 'ligands',
-      'dir_docking': 'docking',
-      'dir_results': 'results',
-      'dir_plots': 'plots',
+      'path_analysis': None,
 
       'file_user_config': 'config.user.toml',
       'file_sob': 'settings.sob',
@@ -33,12 +34,17 @@ class ConfigManager(ManagerBase):
 
     # User Settings with String/EntityPath Only
     self.SETTINGS.user.update(_user_vars)
-    self.SETTINGS.user.plugin_list.docking = ['hdocklite']
-    self.SETTINGS.user.plugin_list.analysis = ['vmdpython', 'chimerax']
+
+    # User workflow default settings (Will override plugin_list)
+    self.SETTINGS.user.workflow_order = ['sync', 'docking', 'analysis', 'results']
+    self.SETTINGS.user.workflow.sync = ['structuresync']
+    self.SETTINGS.user.workflow.docking = ['vina'] # , 'hdocklite'
+    self.SETTINGS.user.workflow.analysis = ['chimerax'] # , 'vmdpython', 'plip', 'freesasa'
 
     # Other settings to be stored in compressed format
     self.SETTINGS.plugin_refs.docking = self.ObjDict()
     self.SETTINGS.plugin_refs.analysis = self.ObjDict()
+
     self.SETTINGS.plugin_data = self.ObjDict()
 
   def __process_config(self) -> None:

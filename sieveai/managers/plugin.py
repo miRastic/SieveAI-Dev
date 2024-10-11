@@ -9,6 +9,7 @@ class PluginManager:
     'vmdpython': 'VMDPython',
     'annapurna': 'AnnapuRNA',
     'mgltools': 'MGLTools',
+    'structuresync': 'StructureSync',
   }
   def __init__(self, *args, **kwargs):
     pass
@@ -22,5 +23,4 @@ class PluginManager:
   def get_plugin(self, _plugin_name):
     return PluginManager.share_plugin(_plugin_name)
 
-  # Register plugin
-  # Discover plugin
+  # Detect plugins automatically

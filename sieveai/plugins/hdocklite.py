@@ -249,11 +249,15 @@ class HDockLite(PluginBase):
       else:
         _score_table = self.PD.concat([_score_table, _cmplx.conformer_scores])
 
+    print(_score_table)
     # Save conformers and ranks as excel
-    self._df_results, self._df_top_ranked = self._rank_conformers(_score_table)
-    self.pd_excel(self.path_excel_results, self._df_results, sheet_name=f"{self.plugin_uid}-All-Ranked")
-    self.pd_excel(self.path_excel_results, self._df_top_ranked, sheet_name=f"{self.plugin_uid}-Top-Ranked")
-
+    try:
+      self._df_results, self._df_top_ranked = self._rank_conformers(_score_table)
+      self.pd_excel(self.path_excel_results, self._df_results, sheet_name=f"{self.plugin_uid}-All-Ranked")
+      self.pd_excel(self.path_excel_results, self._df_top_ranked, sheet_name=f"{self.plugin_uid}-Top-Ranked")
+    except Exception as _e:
+      self.log_error(f"HDOCKLITE_01: {_e}")
+      self.error_traceback(_e)
   def shutdown(self, *args, **kwargs):
     # Prepare HTML server for visualisation of results
     pass
