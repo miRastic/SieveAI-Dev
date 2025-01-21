@@ -1,8 +1,6 @@
 cff-version: 1.2.0
-title: 'SieveAI: An Automated Drug Discovery Pipeline'
-message: >-
-  If you use this software, please cite it using the
-  metadata from this file.
+title: 'SieveAI: An automated drug discovery pipeline'
+message: Cite this package using doi 10.5281/zenodo.10863428.
 type: software
 authors:
   - affiliation: 'Dr. D.Y. Patil Vidyapeeth, Pune'
@@ -10,32 +8,57 @@ authors:
     given-names: Vishal Kumar
     orcid: 'https://orcid.org/0000-0003-1487-3526'
   - affiliation: 'Dr. D.Y. Patil Vidyapeeth, Pune'
-    family-names: Ballav
-    given-names: Sangeeta
-    orcid: 'https://orcid.org/0000-0002-1775-6600'
-  - affiliation: 'Dr. D.Y. Patil Vidyapeeth, Pune'
-    family-names: Nagar
-    given-names: Shuchi
-    orcid: 'https://orcid.org/0000-0002-6271-4215'
-  - affiliation: 'Dr. D.Y. Patil Vidyapeeth, Pune'
     family-names: Ranjan
     given-names: Amit
     orcid: 'https://orcid.org/0000-0002-7900-982X'
+  - affiliation: 'Dr. D.Y. Patil Vidyapeeth, Pune'
+    family-names: Zafar
+    given-names: Isha
+  - affiliation: 'Dr. D.Y. Patil Vidyapeeth, Pune'
+    family-names: Nagar
+    given-names: Shuchi
   - affiliation: 'Dr. D.Y. Patil Vidyapeeth, Pune'
     family-names: Basu
     given-names: Soumya
     orcid: 'https://orcid.org/0000-0002-1726-0154'
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.10863429
+    value: 10.5281/zenodo.10863428
   - type: url
-    value: 'https://www.mirna.in/SieveAI'
+    value: 'https://github.com/VishalKumarSahu/SieveAI'
 repository-code: 'https://github.com/VishalKumarSahu/SieveAI'
 url: 'https://www.mirna.in/SieveAI'
-abstract: An Automated Drug Discovery Pipeline
+abstract: >-
+  Computational approach of molecular docking and dynamics
+  has played a crucial role in finding and understanding
+  therapeutic agents and targets in various diseases and
+  altered metabolic bioprocesses. Over time the increase in
+  the information of molecular structures has led to
+  enhanced computational algorithms and more complex
+  workflow. So the manual approach of drug discovery becomes
+  time consuming and error prone. Though there are packages
+  which have partial automated workflow in the public domain
+  but no package available to automate the complete docking
+  analysis. In the presented pipeline, SieveAI (version
+  0.4), we have created an automated docking and analysis
+  pipeline using python having compatibility for Windows and
+  Linux. It can be extended and exploited to use multiple
+  docking packages and web based tools. The pipeline
+  currently involves usage of open source tools for
+  automation. In its current version, it can perform blind
+  docking and site specific docking by processing and
+  preparing molecular structures for docking using VINA and
+  analysis using ChimeraX. It is suitable for studying the
+  interaction of a single drug on multiple proteins/nucleic
+  acids, multiple drugs with single protein/nucleic acids,
+  or multiple drugs with multiple proteins/nucleic acids. It
+  can be extended to automate web server based docking,
+  prediction, and analysis tools. As a benchmark for the
+  performance, it can dock 1000 complexes in 24 hours on
+  Intel i5 with hexa-core CPU and 8 GB RAM on Ubuntu.
 keywords:
+  - Blind Docking
   - Molecular Docking
-  - Automated Drug Discovery
-  - Protein-protein Docking
-version: v0.7
-date-released: '2024-03-23'
+  - Drug Discovery
+version: v0.8.1
+date-released: '2024-11-29'
